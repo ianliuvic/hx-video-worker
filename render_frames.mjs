@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
 const WORK = process.argv[2];
 const FRAMES = process.argv[3];
 const picksArg = process.argv[4] || "";
@@ -58,7 +60,6 @@ const dateStr = esc(now.toLocaleDateString("en-US", { month: "short", day: "nume
 const LOGO_L = "file://" + path.join(HERE, "assets", "hongxiu-logo-light.png").replace(/\\/g, "/");
 const LOGO_D = "file://" + path.join(HERE, "assets", "hongxiu-logo-dark.png").replace(/\\/g, "/");
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FONT_FILE = path.join(HERE, "assets", "fonts", "montserrat-latin-var.woff2");
 const FONTS = fs.existsSync(FONT_FILE)
   ? `<style>@font-face{font-family:'Montserrat';font-style:normal;font-weight:600 900;font-display:block;src:url('file://${FONT_FILE.replace(/\\/g, "/")}') format('woff2')}</style>`
