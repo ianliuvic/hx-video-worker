@@ -31,7 +31,7 @@ AUTH = "Basic " + base64.b64encode(f"{USER}:{PW}".encode()).decode() if USER and
 
 
 def api(path, params=None):
-    url = f"{WP}/wp-json{path}"
+    url = f"{WP}/wp-json/wp{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params, doseq=True)
     headers = {"User-Agent": "hx-video-worker/1.0"}
