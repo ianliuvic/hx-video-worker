@@ -55,8 +55,8 @@ const catLabel = esc((setCat || cats[0] || "SWIMWEAR").toUpperCase());
 const now = new Date();
 const dateStr = esc(now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase());
 
-const LOGO_L = "file:///E:/cc/wearhongxiu/video/assets/hongxiu-logo-light.png";
-const LOGO_D = "file:///E:/cc/wearhongxiu/video/assets/hongxiu-logo-dark.png";
+const LOGO_L = "file://" + path.join(HERE, "assets", "hongxiu-logo-light.png").replace(/\\/g, "/");
+const LOGO_D = "file://" + path.join(HERE, "assets", "hongxiu-logo-dark.png").replace(/\\/g, "/");
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FONT_FILE = path.join(HERE, "assets", "fonts", "montserrat-latin-var.woff2");
