@@ -16,9 +16,17 @@ import urllib.request
 
 from PIL import Image
 
-WP = os.environ.get("WEARHONGXIU_WP_URL", "https://wearhongxiu.com").rstrip("/")
-USER = os.environ.get("WEARHONGXIU_WP_USER", "")
-PW = os.environ.get("WEARHONGXIU_WP_APP_PASSWORD", "")
+def env_value(name, default=""):
+    """Read env var and strip whitespace + wrapping quotes/backslashes (Coolify escaping artifacts)."""
+    v = (os.environ.get(name) or default).strip()
+    while len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'\\":
+        v = v[1:-1].strip()
+    return v
+
+
+WP = env_value("WEARHONGXIU_WP_URL", "https://wearhongxiu.com").rstrip("/")
+USER = env_value("WEARHONGXIU_WP_USER", "")
+PW = env_value("WEARHONGXIU_WP_APP_PASSWORD", "")
 AUTH = "Basic " + base64.b64encode(f"{USER}:{PW}".encode()).decode() if USER and PW else ""
 
 
