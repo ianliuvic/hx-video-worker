@@ -19,8 +19,14 @@ import re
 import subprocess
 import sys
 import time
+import urllib.parse
 
 import requests
+
+try:
+    import pg8000.dbapi as pgdb
+except Exception:  # noqa: BLE001
+    pgdb = None
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 WORK = os.path.join(APP_DIR, "work")
@@ -99,6 +105,36 @@ def todays_products():
     })
 
 
+def todays_from_collector_db():
+    """Authoritative selection: products FIRST PUBLISHED to WP today (CN),
+    from the 1688 collector database. Returns None when the DB is unavailable."""
+    dsn = env_value("DATABASE_URL")
+    if not dsn or pgdb is None:
+        return None
+    u = urllib.parse.urlparse(dsn)
+    conn = pgdb.connect(
+        user=u.username, password=u.password, host=u.hostname,
+        port=u.port or 5432, database=(u.path or "/").lstrip("/"), timeout=30,
+    )
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            select p.style_no, p.wp_post_id, to_char(p.first_published_at at time zone 'Asia/Shanghai', 'HH24:MI')
+            from product_wordpress_publications p
+            where p.wp_status = 'publish'
+              and p.wp_post_id is not null
+              and (coalesce(p.first_published_at, p.created_at) at time zone 'Asia/Shanghai')::date
+                  = (now() at time zone 'Asia/Shanghai')::date
+            order by p.first_published_at desc nulls last
+            """
+        )
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+    return [{"style": r[0], "post_id": r[1], "at": r[2]} for r in rows]
+
+
 def pick_images(product):
     """Lowest-numbered shots first (hero/model shots), up to 3."""
     style = product["style"]
@@ -152,22 +188,42 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(WORK, exist_ok=True)
 
-    products = todays_products()
-    if not products:
-        print("no products published today; nothing to do")
+    # selection: collector DB first (products first published to WP today),
+    # WP publish-date query only as fallback (collector backdates WP post dates).
+    candidates = []
+    try:
+        rows = todays_from_collector_db()
+        if rows is not None:
+            candidates = [{"post_id": r["post_id"], "style": r["style"], "at": r["at"]} for r in rows]
+            print(f"collector db: {len(candidates)} product(s) first published today")
+        else:
+            print("collector db unavailable; falling back to WP date query")
+            candidates = [{"post_id": p["id"], "style": None} for p in todays_products()]
+    except Exception as exc:  # noqa: BLE001
+        print(f"selection failed: {str(exc)[:200]}")
+        if FEISHU_APP_ID and FEISHU_CHAT_ID:
+            try:
+                feishu_send_text(feishu_token(), f"⚠️ 新品视频任务：选品失败\n{str(exc)[:180]}")
+            except Exception:  # noqa: BLE001
+                pass
+        return 1
+
+    if not candidates:
+        print("no products first published today; nothing to do")
         return 0
 
-    random.shuffle(products)
-    chosen = products[:MAX_PER_DAY]
-    print(f"today: {len(products)} products; picked {len(chosen)}")
+    random.shuffle(candidates)
+    chosen = candidates[:MAX_PER_DAY]
+    print(f"picked {len(chosen)} of {len(candidates)}: " + ", ".join(str(c.get('style') or c.get('post_id')) for c in chosen))
 
     token = feishu_token() if (FEISHU_APP_ID and FEISHU_CHAT_ID) else None
     done, failed = [], []
 
-    for p in chosen:
-        slug = p["slug"]
+    for c in chosen:
         try:
             cleanup()
+            prod = api(f"/v2/product/{c['post_id']}", {"_fields": "id,slug,title,link"})
+            slug = prod["slug"]
             product = fetch(slug, WORK)
             mp4 = render_video(slug, product)
             size_mb = os.path.getsize(mp4) / 1024 / 1024
@@ -176,8 +232,8 @@ def main():
             done.append(f"{product['style']} ({size_mb:.1f}MB)")
             print(f"OK {product['style']} -> {mp4}")
         except Exception as exc:  # noqa: BLE001
-            failed.append(f"{slug}: {str(exc)[:120]}")
-            print(f"FAIL {slug}: {exc}")
+            failed.append(f"{c.get('style') or c.get('post_id')}: {str(exc)[:120]}")
+            print(f"FAIL {c.get('style') or c.get('post_id')}: {exc}")
 
     if token:
         lines = [f"今日新品视频：{len(done)}/{len(chosen)} 条"]
