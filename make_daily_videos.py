@@ -42,7 +42,7 @@ FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "").strip().strip('"').strip("
 TZ = datetime.timezone(datetime.timedelta(hours=8))
 
 sys.path.insert(0, APP_DIR)
-from fetch_product import fetch, api  # noqa: E402
+from fetch_product import fetch, api, env_value  # noqa: E402
 
 
 # ---------- Feishu ----------
