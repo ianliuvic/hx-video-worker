@@ -9,7 +9,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends cron python3-pip ffmpeg tzdata \
  && rm -rf /var/lib/apt/lists/* \
  && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
- && pip3 install --no-cache-dir pillow requests pg8000
+ && pip3 install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple pillow requests pg8000
 
 WORKDIR /app
 
