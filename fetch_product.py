@@ -53,7 +53,7 @@ def corner_bg(path):
     return "rgb(%d,%d,%d)" % tuple(sum(v[i] for v in vals) // 4 for i in range(3))
 
 
-def fetch(slug, out_dir):
+def fetch(slug, out_dir, style_hint=None):
     os.makedirs(out_dir, exist_ok=True)
     prods = api("/v2/product", {"slug": slug, "status": "publish", "_fields": "id,title,link,featured_media,product_cat"})
     if not prods:
@@ -62,7 +62,8 @@ def fetch(slug, out_dir):
 
     fm = api(f"/v2/media/{p['featured_media']}", {"_fields": "id,source_url"})
     fname = fm["source_url"].rsplit("/", 1)[-1]
-    style = fname.rsplit("-", 1)[0] if "-" in fname else fname.rsplit(".", 1)[0]
+    derived = fname.rsplit("-", 1)[0] if "-" in fname else fname.rsplit(".", 1)[0]
+    style = style_hint or derived
 
     cat_names = []
     if p.get("product_cat"):

@@ -224,7 +224,7 @@ def main():
             cleanup()
             prod = api(f"/v2/product/{c['post_id']}", {"_fields": "id,slug,title,link"})
             slug = prod["slug"]
-            product = fetch(slug, WORK)
+            product = fetch(slug, WORK, style_hint=c.get("style"))
             mp4 = render_video(slug, product)
             size_mb = os.path.getsize(mp4) / 1024 / 1024
             if token:
