@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-# make sure the daily log exists
-touch /var/log/video-worker.log
-
-# start cron in the background and keep a health endpoint in the foreground
-cron
+# The daily batch is triggered externally by the Coolify scheduler
+# (POST /run on the health server), so no cron runs inside this container.
 exec python3 health_server.py
